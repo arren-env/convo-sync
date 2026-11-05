@@ -1,0 +1,10 @@
+{
+  "name": "convo-sync",
+  "version": "0.1.0",
+  "description": "Save AI agent conversations (Claude Code, Codex, Antigravity, OpenCode) as Markdown notes in your project.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test" },
+  "license": "MIT"
+}

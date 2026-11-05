@@ -1,0 +1,12 @@
+{"timestamp":"2026-10-26T06:01:23.535Z","type":"session_meta","payload":{"id":"01a176cc-9ca5-7072-9924-51f26b560e3b","session_id":"01a176cc-9ca5-7072-9924-51f26b560e3b","timestamp":"2026-10-26T06:01:23.535Z","cwd":"/home/u/notion","cli_version":"0.164.0"}}
+{"timestamp":"2026-10-26T06:01:24.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"system rules"}]}}
+{"timestamp":"2026-10-26T06:01:24.100Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n  <cwd>/home/u/notion</cwd>\n</environment_context>"}]}}
+{"timestamp":"2026-10-26T06:01:25.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"fix the sync bug"}]}}
+{"timestamp":"2026-10-26T06:01:26.000Z","type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"look at sync.js"}]}}
+{"timestamp":"2026-10-26T06:01:27.000Z","type":"response_item","payload":{"type":"function_call","name":"exec","arguments":"{}","call_id":"c1"}}
+{"timestamp":"2026-10-26T06:01:28.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"c1","output":"ok"}}
+{"timestamp":"2026-10-26T06:01:29.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Fixed it."}]}}
+{"timestamp":"2026-10-26T06:01:30.000Z","type":"event_msg","payload":{"type":"task_complete"}}
+not json at all
+{"timestamp":"2026-10-26T06:02:00.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Context handoff (full_thread_summary): replayed"}],"internal_chat_message_metadata_passthrough":{"turn_id":"auto-compact-0","content_item_kinds":["unknown"]}}}
+{"timestamp":"2026-10-26T06:02:01.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"[Historical assistant; command_execution] replayed"}],"internal_chat_message_metadata_passthrough":{"turn_id":"auto-compact-0","content_item_kinds":["unknown"]}}}

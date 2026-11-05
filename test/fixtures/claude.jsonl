@@ -1,0 +1,11 @@
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-11-05T04:55:29.000Z","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","content":"ignored"}
+{"type":"user","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","cwd":"/home/u/demo","timestamp":"2026-11-05T05:00:00.000Z","isSidechain":false,"message":{"role":"user","content":"hi"}}
+{"type":"assistant","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","cwd":"/home/u/demo","timestamp":"2026-11-05T05:00:01.000Z","isSidechain":false,"message":{"role":"assistant","content":[{"type":"thinking","thinking":"hmm"}]}}
+{"type":"assistant","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:02.000Z","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"hello"},{"type":"tool_use","id":"t1","name":"Read","input":{}}]}}
+{"type":"user","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:03.000Z","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"file body"}]}}
+{"type":"assistant","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:04.000Z","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}
+{"type":"user","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:05.000Z","isSidechain":false,"message":{"role":"user","content":[{"type":"text","text":"<system-reminder>x</system-reminder>"}]}}
+{"type":"user","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:05.500Z","isMeta":true,"message":{"role":"user","content":"meta text"}}
+{"type":"assistant","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:00:06.000Z","isSidechain":true,"message":{"role":"assistant","content":[{"type":"text","text":"subagent noise"}]}}
+garbage line {
+{"type":"user","sessionId":"6ca14529-41a8-4f4e-8bc9-d16dcbd4b6ca","timestamp":"2026-11-05T05:01:00.000Z","isSidechain":false,"message":{"role":"user","content":[{"type":"text","text":"second question"}]}}

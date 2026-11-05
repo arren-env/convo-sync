@@ -1,0 +1,115 @@
+// Reads saved conversation notes back, so a new agent session can pick up where an
+// earlier one (in any agent) left off. Output is bounded by maxChars to keep token cost flat.
+import fs from 'node:fs';
+import path from 'node:path';
+import { loadConfig } from './config.mjs';
+
+const NOTE_NAME = /^\d{4}-\d{2}-\d{2}_[a-z]+_[A-Za-z0-9_-]+\.md$/;
+
+function unquote(v) {
+  const s = String(v ?? '').trim();
+  if (s.startsWith('"')) { try { return JSON.parse(s); } catch { /* fall through */ } }
+  return s;
+}
+
+/**
+ * Parse a note written by toMarkdown().
+ * @returns {{title: string, agent: string, sessionId: string, created: string, updated: string,
+ *   messages: Array<{role: 'user'|'assistant', text: string}>}}
+ */
+export function parseNote(text) {
+  const src = String(text).replace(/^﻿/, '').replace(/\r\n/g, '\n');
+  const fm = src.match(/^---\n([\s\S]*?)\n---\n/);
+  const meta = {};
+  if (fm) {
+    for (const line of fm[1].split('\n')) {
+      const m = line.match(/^(\w+):\s*(.*)$/);
+      if (m) meta[m[1]] = unquote(m[2]);
+    }
+  }
+  const body = fm ? src.slice(fm[0].length) : src;
+  // Messages are "## User|## Assistant", blank line, text, blank line, "---".
+  const parts = `---\n\n${body.replace(/^\n+/, '')}`.split(/(?:^|\n)---\n\n## (User|Assistant)\n\n/);
+  const messages = [];
+  for (let i = 1; i < parts.length; i += 2) {
+    const text = parts[i + 1].replace(/\n*---\s*$/, '').trim();
+    messages.push({ role: parts[i] === 'User' ? 'user' : 'assistant', text });
+  }
+  return {
+    title: meta.title || '',
+    agent: meta.agent || '',
+    sessionId: meta.session_id || '',
+    created: meta.created || '',
+    updated: meta.updated || '',
+    messages,
+  };
+}
+
+function listNotes(dir) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return []; }
+  const notes = [];
+  for (const name of names) {
+    if (!NOTE_NAME.test(name)) continue;
+    const file = path.join(dir, name);
+    try {
+      const note = parseNote(fs.readFileSync(file, 'utf8'));
+      if (!note.messages.length) continue;
+      const sortKey = note.updated || fs.statSync(file).mtime.toISOString();
+      notes.push({ ...note, file, name, sortKey });
+    } catch { /* unreadable: skip */ }
+  }
+  return notes.sort((a, b) => (a.sortKey < b.sortKey ? 1 : a.sortKey > b.sortKey ? -1 : 0));
+}
+
+const label = (role) => (role === 'user' ? '**User:**' : '**Assistant:**');
+
+function clip(text, max) {
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 20)).trimEnd()} …[truncated]`;
+}
+
+/** The first request plus as many of the latest messages as fit in budget. */
+function renderNote(note, index, budget) {
+  const head = `## ${index}. ${note.agent} · ${note.updated || note.created} · ${JSON.stringify(note.title)}\nFile: ${note.file}\n\n`;
+  let room = budget - head.length;
+  const [first, ...rest] = note.messages;
+  const firstText = `${label(first.role)} ${clip(first.text, Math.min(800, Math.max(200, Math.floor(room / 4))))}\n\n`;
+  room -= firstText.length;
+  const tail = [];
+  for (let i = rest.length - 1; i >= 0; i--) {
+    let chunk = `${label(rest[i].role)} ${rest[i].text}\n\n`;
+    if (chunk.length > room) {
+      // Always show at least part of the most recent message.
+      if (tail.length === 0 && room > 200) chunk = `${label(rest[i].role)} ${clip(rest[i].text, room - 40)}\n\n`;
+      else break;
+    }
+    tail.unshift(chunk);
+    room -= chunk.length;
+  }
+  const omitted = rest.length - tail.length;
+  const gap = omitted > 0 ? `*[… ${omitted} earlier messages omitted …]*\n\n` : '';
+  return head + firstText + gap + tail.join('');
+}
+
+/**
+ * Markdown digest of the most recent conversation notes in a project.
+ * @param {{projectRoot: string, limit?: number, maxChars?: number}} args
+ */
+export function buildContext({ projectRoot, limit = 3, maxChars = 12000 }) {
+  const dir = path.resolve(projectRoot, loadConfig(projectRoot).outputDir);
+  const notes = listNotes(dir);
+  if (!notes.length) return `No saved conversations in ${dir} yet.\n`;
+
+  const shown = notes.slice(0, Math.max(1, limit));
+  const older = notes.slice(shown.length, shown.length + 10);
+  const header = `# Earlier conversations in this project (newest first)\n\nNotes folder: ${dir}\n\n`;
+  const footer = older.length
+    ? `## Older notes (not included)\n\n${older.map((n) => `- ${n.name} · ${JSON.stringify(n.title)}`).join('\n')}\n`
+    : '';
+  // The newest conversation gets the larger share; the rest split what remains.
+  const room = Math.max(1000, maxChars - header.length - footer.length);
+  const shares = shown.length === 1 ? [room] : [Math.floor(room * 0.6), ...shown.slice(1).map(() => Math.floor((room * 0.4) / (shown.length - 1)))];
+  const sections = shown.map((n, i) => renderNote(n, i + 1, shares[i]));
+  return header + sections.join('') + footer;
+}
