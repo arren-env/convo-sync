@@ -11,7 +11,7 @@ export const copilotHome = () => process.env.COPILOT_HOME || path.join(os.homedi
 /** @returns {import('../session.mjs').Session} */
 export function parseCopilot(text, meta = {}) {
   const messages = [];
-  let sessionId = null, cwd = null, startedAt = null, updatedAt = null;
+  let sessionId = null, cwd = null, startedAt = null, updatedAt = null, compactSummary = null;
 
   for (const line of readJsonl(text)) {
     const d = line.data;
@@ -24,6 +24,9 @@ export function parseCopilot(text, meta = {}) {
       cwd ??= d.context?.cwd || null;
       const t = toDate(d.startTime);
       if (t && (!startedAt || t < startedAt)) startedAt = t;
+    } else if (line.type === 'session.compaction_complete') {
+      const summary = typeof d.summaryContent === 'string' ? d.summaryContent.trim() : '';
+      if (summary) compactSummary = summary;
     } else if (line.type === 'user.message') {
       // `content` is what the user typed; `transformedContent` adds injected context.
       const body = typeof d.content === 'string' ? d.content.trim() : '';
@@ -47,6 +50,7 @@ export function parseCopilot(text, meta = {}) {
     cwd: cwd || meta.cwd || null,
     startedAt, updatedAt,
     messages: finalizeMessages(messages),
+    ...(compactSummary ? { compactSummary } : {}),
   };
 }
 

@@ -52,13 +52,20 @@ Switch agents and run `/convo-sync` (or ask "continue where we left off"). The s
 node scripts/convo-sync.mjs context
 ```
 
-This prints the newest conversations saved in the current project, from any agent, newest first: each one's first request plus its latest messages. The output is capped at about 12,000 characters (`--max-chars <n>`, `--limit <n>` to change), so loading context costs roughly the same however long the earlier conversations were. The agent reads that and gives you a short catch-up before continuing.
+This prints the newest conversations saved in the current project, from any agent, newest first, as each note's summary (see Output). Add `--full` to print each one's first request plus its latest messages instead. The output is capped at about 12,000 characters (`--max-chars <n>`, `--limit <n>` to change), so loading context costs roughly the same however long the earlier conversations were. The agent reads that and gives you a short catch-up before continuing, without opening other files.
+
+Each extra command an agent runs re-sends everything it has read so far, so a catch-up costs least in a new chat.
 
 ## Output
 
 One file per session: `.agents/conversations/2026-11-05_claude_6ca14529.md`.
 
 - Frontmatter: `title`, `agent`, `client` (Copilot only: `cli` or `vscode`), `session_id`, `project`, `created`, `updated`, `tags: [ai-chat, <agent>]`.
+- `## Summary`, rebuilt on every sync with no model involved:
+  - **Goal:** your first request.
+  - **Status:** the latest answer.
+  - **Commits since start** and **Uncommitted files**, read from git (up to 20 each). If two agents work in the same repo at once, each sees the other's changes too.
+  - **Earlier context:** the summary the agent itself wrote when it compacted a long session (Claude Code and Copilot).
 - Body: `## User` / `## Assistant` sections.
 - Optionally (`"copyRaw": true`), a redacted `.jsonl` copy of the source transcript sits next to the note. OpenCode has no source transcript, so it never gets one.
 

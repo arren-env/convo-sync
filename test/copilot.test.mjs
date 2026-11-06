@@ -169,3 +169,11 @@ test('copilot notes without workspace.yaml have no client line', async () => {
   const { mdPath } = await syncSession({ agent: 'copilot', payload: { sessionId: SID, transcriptPath: fixture, cwd: e.projectRoot } });
   assert.doesNotMatch(fs.readFileSync(mdPath, 'utf8'), /^client:/m);
 });
+
+test('parseCopilot reads summaryContent from compaction events', () => {
+  const raw = [
+    JSON.stringify({ type: 'user.message', data: { content: 'hi' } }),
+    JSON.stringify({ type: 'session.compaction_complete', data: { success: true, summaryContent: '<overview>x</overview>' } }),
+  ].join('\n');
+  assert.equal(parseCopilot(raw).compactSummary, '<overview>x</overview>');
+});

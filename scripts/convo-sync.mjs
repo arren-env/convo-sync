@@ -4,7 +4,7 @@
 //   node convo-sync.mjs install   [--agent <name|all>] [--scope user|project]
 //   node convo-sync.mjs uninstall [--agent <name|all>] [--scope user|project]
 //   node convo-sync.mjs status
-//   node convo-sync.mjs context   [--limit <n>] [--max-chars <n>]
+//   node convo-sync.mjs context   [--limit <n>] [--max-chars <n>] [--full]
 //   node convo-sync.mjs sync --agent <claude|codex|antigravity|opencode|copilot> [--payload-file <f>]
 import fs from 'node:fs';
 import os from 'node:os';
@@ -91,7 +91,7 @@ function usage() {
     '  install   [--agent <name|all>] [--scope user|project]   default: all detected agents, user scope (every project)\n' +
     '  uninstall [--agent <name|all>] [--scope user|project]\n' +
     '  status\n' +
-    '  context   [--limit <n>] [--max-chars <n>]   print the latest saved conversations in this project\n' +
+    '  context   [--limit <n>] [--max-chars <n>] [--full]   summaries of the latest saved conversations (--full: their messages)\n' +
     '  sync --agent <claude|codex|antigravity|opencode|copilot> [--payload-file <f>]   (called by the hooks)\n',
   );
 }
@@ -138,6 +138,7 @@ if (command === 'sync') {
     projectRoot: projectRootFor(process.cwd()),
     limit: num(flags.limit, 3),
     maxChars: num(flags['max-chars'], 12000),
+    full: Boolean(flags.full),
   }));
 } else {
   usage();

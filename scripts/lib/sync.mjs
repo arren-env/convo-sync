@@ -3,6 +3,7 @@ import path from 'node:path';
 import { loadConfig } from './config.mjs';
 import { redact, redactJsonl } from './redact.mjs';
 import { toMarkdown, fileBaseName } from './render.mjs';
+import { gitFacts } from './git.mjs';
 import { parseClaude, locateClaude } from './adapters/claude.mjs';
 import { parseCodex, locateCodex, findCodexRollout } from './adapters/codex.mjs';
 import { parseAntigravity, locateAntigravity } from './adapters/antigravity.mjs';
@@ -80,9 +81,12 @@ export async function syncSession({ agent, payload, projectRoot, loaded }) {
       m.text = redact(m.text);
       if (m.thinking) m.thinking = redact(m.thinking);
     }
+    if (session.compactSummary) session.compactSummary = redact(session.compactSummary);
   }
 
   const outDir = path.resolve(root, config.outputDir);
+  const git = gitFacts(root, session.startedAt, outDir);
+  if (git) session.git = config.redact ? { commits: git.commits.map((c) => redact(c)), files: git.files.map((f) => redact(f)) } : git;
   fs.mkdirSync(outDir, { recursive: true });
   const base = fileBaseName(session);
   const mdPath = path.join(outDir, `${base}.md`);

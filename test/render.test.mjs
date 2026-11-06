@@ -57,3 +57,42 @@ test('title is first user message, collapsed, escaped, max 80 chars', () => {
 test('fileBaseName drops an agent prefix like ses_ before taking 8 chars', () => {
   assert.equal(fileBaseName({ ...session, agent: 'opencode', sessionId: 'ses_15a464b39ffeDC4' }), '2026-11-05_opencode_15a464b3');
 });
+
+test('toMarkdown writes a summary block before the first message', () => {
+  const md = toMarkdown({
+    ...session,
+    compactSummary: 'We picked GitHub Actions.',
+    git: { commits: ['abc1234 add workflow'], files: [' M README.md'] },
+  }, off);
+  const iSummary = md.indexOf('## Summary');
+  assert.ok(iSummary > 0 && iSummary < md.indexOf('## User'), md);
+  assert.match(md, /\*\*Goal:\*\* hi/);
+  assert.match(md, /\*\*Status:\*\* hello/);
+  assert.match(md, /\*\*Commits since start:\*\*\n- abc1234 add workflow/);
+  assert.match(md, /\*\*Uncommitted files:\*\*\n- ` M README\.md`/);
+  assert.match(md, /\*\*Earlier context \(compacted by the agent\):\*\*\n\nWe picked GitHub Actions\./);
+});
+
+test('toMarkdown omits empty summary sections', () => {
+  const md = toMarkdown(session, off);
+  assert.match(md, /## Summary/);
+  assert.doesNotMatch(md, /Commits since start|Uncommitted files|Earlier context/);
+});
+
+test('toMarkdown caps long summary fields', () => {
+  const md = toMarkdown({ ...session, compactSummary: 'c'.repeat(9000), messages: [
+    { role: 'user', text: 'g'.repeat(2000) }, { role: 'assistant', text: 's'.repeat(5000) },
+  ] }, off);
+  const block = md.slice(md.indexOf('## Summary'), md.indexOf('## User'));
+  assert.ok(block.length < 500 + 1500 + 4000 + 400, `block ${block.length}`);
+  assert.match(block, /…\[truncated\]/);
+});
+
+test('a long status keeps the end of the latest answer, where the conclusion is', () => {
+  const text = `${'progress note. '.repeat(300)}FINAL ANSWER`;
+  const md = toMarkdown({ ...session, messages: [{ role: 'user', text: 'q' }, { role: 'assistant', text }] }, off);
+  const status = md.slice(md.indexOf('**Status:**'), md.indexOf('<!-- /summary -->'));
+  assert.match(status, /FINAL ANSWER/);
+  assert.match(status, /^\*\*Status:\*\* …\[earlier part cut\] /);
+  assert.ok(status.length < 1600, `status ${status.length}`);
+});

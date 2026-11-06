@@ -38,3 +38,22 @@ test('locateClaude maps hook payload fields', () => {
     { transcriptPath: '/x.jsonl', sessionId: 's', cwd: '/p' });
   assert.deepEqual(locateClaude({}), { transcriptPath: null, sessionId: null, cwd: null });
 });
+
+test('parseClaude keeps the compaction summary out of the messages', () => {
+  const line = (text, ts) => JSON.stringify({ type: 'user', isCompactSummary: true, timestamp: ts, message: { content: text } });
+  const raw = [
+    '{"type":"user","message":{"content":"start"}}',
+    line('Summary of earlier work', '2026-11-05T05:00:00Z'),
+    line('Newer summary', '2026-11-05T06:00:00Z'),
+    '{"type":"assistant","message":{"content":[{"type":"text","text":"ok"}]}}',
+  ].join('\n');
+  const s = parseClaude(raw, {});
+  assert.equal(s.compactSummary, 'Newer summary');
+  assert.ok(!s.messages.some((m) => /summary/i.test(m.text)), JSON.stringify(s.messages));
+});
+
+test('parseClaude strips the boilerplate around a compaction summary', () => {
+  const text = 'This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary>Bash, Edit</tools-used-before-summary>\n</system-reminder>\n\nSummary:\n1. Primary request: dark mode icon';
+  const raw = JSON.stringify({ type: 'user', isCompactSummary: true, message: { content: text } });
+  assert.equal(parseClaude(raw, {}).compactSummary, 'Summary:\n1. Primary request: dark mode icon');
+});

@@ -19,6 +19,45 @@ function titleOf(session) {
 
 const yamlStr = (s) => JSON.stringify(String(s ?? ''));
 
+export const SUMMARY_HEADING = '## Summary';
+// Ends the block unambiguously: summary text may itself contain the note's message separators.
+export const SUMMARY_END = '<!-- /summary -->';
+const CAP = { goal: 500, status: 1500, compact: 4000 };
+
+function clip(text, max) {
+  const t = String(text).trim();
+  return t.length <= max ? t : `${t.slice(0, max - 14).trimEnd()} …[truncated]`;
+}
+
+/** Keep the end of the text instead of the start. */
+function clipStart(text, max) {
+  const t = String(text).trim();
+  const mark = '…[earlier part cut] ';
+  return t.length <= max ? t : `${mark}${t.slice(t.length - (max - mark.length)).trimStart()}`;
+}
+
+/**
+ * Model-free summary placed before the messages: the goal, the latest answer,
+ * code changes from git, and the agent's own compaction summary when it made one.
+ */
+function summaryLines(session) {
+  const goal = session.messages.find((m) => m.role === 'user' && m.text.trim());
+  const status = session.messages.findLast((m) => m.role === 'assistant' && m.text.trim());
+  if (!goal && !status) return [];
+  const lines = [SUMMARY_HEADING, ''];
+  if (goal) lines.push(`**Goal:** ${clip(goal.text, CAP.goal)}`, '');
+  // One assistant message can hold a whole turn of progress notes; the conclusion is at the end.
+  if (status) lines.push(`**Status:** ${clipStart(status.text, CAP.status)}`, '');
+  const { commits = [], files = [] } = session.git || {};
+  if (commits.length) lines.push('**Commits since start:**', ...commits.map((c) => `- ${c}`), '');
+  if (files.length) lines.push('**Uncommitted files:**', ...files.map((f) => `- \`${f}\``), '');
+  if (session.compactSummary) {
+    lines.push('**Earlier context (compacted by the agent):**', '', clip(session.compactSummary, CAP.compact), '');
+  }
+  lines.push(SUMMARY_END, '', '---', '');
+  return lines;
+}
+
 /**
  * Render a session as an Obsidian-friendly Markdown note.
  * @param {import('./session.mjs').Session} session
@@ -40,6 +79,7 @@ export function toMarkdown(session, opts) {
     `  - ${session.agent}`,
     '---',
     '',
+    ...summaryLines(session),
   ];
 
   for (const m of session.messages) {

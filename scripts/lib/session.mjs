@@ -3,7 +3,9 @@
  *
  * @typedef {'claude'|'codex'|'antigravity'|'opencode'|'copilot'} Agent
  * @typedef {{ role: 'user'|'assistant', text: string, thinking?: string, tools?: string[], at?: Date }} Message
- * @typedef {{ agent: Agent, sessionId: string, cwd: string|null, startedAt: Date|null, updatedAt: Date|null, messages: Message[] }} Session
+ * @typedef {{ agent: Agent, sessionId: string, cwd: string|null, startedAt: Date|null, updatedAt: Date|null, messages: Message[],
+ *   compactSummary?: string, git?: {commits: string[], files: string[]} }} Session
+ *   compactSummary: the agent's latest summary of compacted context. git: set by sync, see git.mjs.
  */
 
 /** Parse JSONL text, tolerating a BOM, CRLF line endings, blank and malformed lines. */

@@ -147,7 +147,8 @@ async function runPlugin(clientMessages) {
   const mod = await import('file://' + r.file.split(path.sep).join('/'));
   const hooks = await mod.ConvoSync({ client: { session: { messages: clientMessages } }, directory: e.projectRoot });
   await hooks.event({ event: { type: 'session.idle', properties: { sessionID: 'ses_x' } } });
-  for (let i = 0; i < 40 && !fs.existsSync(marker); i++) await new Promise((res) => setTimeout(res, 100));
+  // Up to 10 s: starting `node` is slow on Windows while the rest of the suite runs in parallel.
+  for (let i = 0; i < 100 && !fs.existsSync(marker); i++) await new Promise((res) => setTimeout(res, 100));
   return fs.existsSync(marker) ? JSON.parse(fs.readFileSync(marker, 'utf8')) : null;
 }
 const data = [{ info: { role: 'user' }, parts: [{ type: 'text', text: 'hi' }] }];

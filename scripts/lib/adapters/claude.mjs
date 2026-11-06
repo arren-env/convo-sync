@@ -12,13 +12,25 @@ function blocksOf(content) {
 /** @returns {import('../session.mjs').Session} */
 export function parseClaude(text, meta = {}) {
   const messages = [];
-  let sessionId = null, cwd = null, startedAt = null, updatedAt = null;
+  let sessionId = null, cwd = null, startedAt = null, updatedAt = null, compactSummary = null;
 
   for (const line of readJsonl(text)) {
     const at = toDate(line.timestamp);
     if (at) { startedAt ??= at; updatedAt = at; }
     sessionId ??= line.sessionId || null;
     if (line.type !== 'user' && line.type !== 'assistant') continue;
+    if (line.isCompactSummary) {
+      // Written by Claude Code when it compacts a long session; not something the user typed.
+      const summary = blocksOf(line.message?.content)
+        .map((b) => (b?.type === 'text' && typeof b.text === 'string' ? b.text : ''))
+        .join('\n')
+        // Drop the fixed preamble and injected reminders so the cap goes to the summary itself.
+        .replace(/^This session is being continued[^\n]*\n?/, '')
+        .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '')
+        .trim();
+      if (summary) compactSummary = summary;
+      continue;
+    }
     if (line.isSidechain || line.isMeta) continue;
     cwd ??= line.cwd || null;
 
@@ -47,6 +59,7 @@ export function parseClaude(text, meta = {}) {
     cwd: cwd || meta.cwd || null,
     startedAt, updatedAt,
     messages: finalizeMessages(messages),
+    ...(compactSummary ? { compactSummary } : {}),
   };
 }
 

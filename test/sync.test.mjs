@@ -90,3 +90,25 @@ test('CLI sync writes the note from a stdin payload', () => {
   assert.equal(r.stdout, '{}\n');
   assert.equal(fs.readdirSync(path.join(proj, '.agents', 'conversations')).filter((f) => f.endsWith('.md')).length, 1);
 });
+
+test('syncSession redacts the compaction summary', async () => {
+  const secret = 'sk-ant-api03-abcDEF1234567890abcdef';
+  const line = `\n{"type":"user","isCompactSummary":true,"message":{"content":"used key ${secret}"}}\n`;
+  const { payload } = setup(line);
+  const { mdPath } = await syncSession({ agent: 'claude', payload });
+  const md = fs.readFileSync(mdPath, 'utf8');
+  assert.ok(!md.includes(secret));
+  assert.match(md, /used key \[REDACTED\]/);
+});
+
+test('git file names in the summary are redacted', async () => {
+  const secret = 'sk-ant-api03-abcDEF1234567890abcdef';
+  const { proj, payload } = setup();
+  fs.rmSync(path.join(proj, '.git'), { recursive: true });
+  spawnSync('git', ['init', '-q'], { cwd: proj });
+  fs.writeFileSync(path.join(proj, `${secret}.txt`), 'x');
+  const { mdPath } = await syncSession({ agent: 'claude', payload });
+  const md = fs.readFileSync(mdPath, 'utf8');
+  assert.match(md, /Uncommitted files/);
+  assert.ok(!md.includes(secret));
+});
