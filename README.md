@@ -1,5 +1,7 @@
 # convo-sync
 
+[![skills.sh](https://skills.sh/b/arren-env/convo-sync)](https://skills.sh/arren-env/convo-sync)
+
 Save your AI coding-agent conversations as Markdown notes inside your project, automatically, after every turn. They can be read and searched in Obsidian, or versioned with your code.
 
 - **Agents:** Claude Code, OpenAI Codex, Google Antigravity, OpenCode, GitHub Copilot (CLI and VS Code chat)
@@ -12,7 +14,7 @@ Save your AI coding-agent conversations as Markdown notes inside your project, a
 As a skill (any agent supported by [skills.sh](https://skills.sh)):
 
 ```bash
-npx skills add <owner>/convo-sync
+npx skills add arren-env/convo-sync
 ```
 
 Then ask your agent to "set up convo-sync", or run it yourself once:
