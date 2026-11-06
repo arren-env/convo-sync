@@ -5,7 +5,8 @@ import path from 'node:path';
 import { loadConfig } from './config.mjs';
 import { SUMMARY_HEADING, SUMMARY_END } from './render.mjs';
 
-const NOTE_NAME = /^\d{4}-\d{2}-\d{2}_[a-z]+_[A-Za-z0-9_-]+\.md$/;
+// YYYY-MM-DD_HHmm_<agent>_<id>.md, or the older YYYY-MM-DD_<agent>_<id>.md.
+const NOTE_NAME = /^\d{4}-\d{2}-\d{2}_(?:\d{4}_)?[a-z]+_[A-Za-z0-9_-]+\.md$/;
 
 function unquote(v) {
   const s = String(v ?? '').trim();

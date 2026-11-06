@@ -7,6 +7,7 @@ import { redact, redactJsonl } from '../scripts/lib/redact.mjs';
 import { DEFAULTS } from '../scripts/lib/config.mjs';
 import { install, targetFile } from '../scripts/lib/install.mjs';
 import { syncSession } from '../scripts/lib/sync.mjs';
+import { fileBaseName } from '../scripts/lib/render.mjs';
 
 // C1: raw JSONL redaction must work on escaped quotes and keep every line valid JSON.
 test('redactJsonl redacts quoted secrets inside JSON strings and keeps lines valid', () => {
@@ -49,11 +50,10 @@ test('failed write leaves no .tmp files behind', async () => {
   fs.mkdirSync(path.join(proj, '.git'), { recursive: true });
   const transcript = path.join(tmp, 't.jsonl');
   fs.writeFileSync(transcript, '{"type":"user","timestamp":"2026-11-05T05:00:00.000Z","message":{"content":"hi"}}\n');
-  const d = new Date(2026, 10, 5);
-  const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const base = fileBaseName({ agent: 'claude', sessionId: 'abcdefgh-1', startedAt: new Date('2026-11-05T05:00:00.000Z') });
   const outDir = path.join(proj, '.agents', 'conversations');
   // Block the rename by putting a non-empty directory where the note should go.
-  fs.mkdirSync(path.join(outDir, `${ymd}_claude_abcdefgh.md`, 'x'), { recursive: true });
+  fs.mkdirSync(path.join(outDir, `${base}.md`, 'x'), { recursive: true });
   await assert.rejects(syncSession({ agent: 'claude', payload: { transcript_path: transcript, session_id: 'abcdefgh-1', cwd: proj } }));
   assert.deepEqual(fs.readdirSync(outDir).filter((f) => f.endsWith('.tmp')), []);
 });

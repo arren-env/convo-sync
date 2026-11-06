@@ -6,8 +6,19 @@ function safeId(id) {
   return String(id || 'unknown').replace(/^ses_/, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 8) || 'unknown';
 }
 
-/** e.g. 2026-11-05_claude_6ca14529 */
+/**
+ * e.g. 2026-11-05_1432_claude_6ca14529 (local start date and time, no colons so it is valid on Windows).
+ * Without a start time the HHmm part is left out: using "now" would rename the note on every sync.
+ */
 export function fileBaseName(session) {
+  const id = `${session.agent}_${safeId(session.sessionId)}`;
+  const d = session.startedAt;
+  if (!d) return `${localDate(new Date())}_${id}`;
+  return `${localDate(d)}_${pad(d.getHours())}${pad(d.getMinutes())}_${id}`;
+}
+
+/** Name used before the start time was added: 2026-11-05_claude_6ca14529. */
+export function legacyBaseName(session) {
   return `${localDate(session.startedAt || new Date())}_${session.agent}_${safeId(session.sessionId)}`;
 }
 

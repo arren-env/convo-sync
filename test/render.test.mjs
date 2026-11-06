@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toMarkdown, fileBaseName } from '../scripts/lib/render.mjs';
+import { toMarkdown, fileBaseName, legacyBaseName } from '../scripts/lib/render.mjs';
 
 const session = {
   agent: 'claude', sessionId: '6ca14529-41a8', cwd: '/p',
@@ -12,11 +12,16 @@ const session = {
 };
 const off = { includeThinking: false, includeTools: false };
 
-test('fileBaseName uses local start date, agent and 8-char id', () => {
-  assert.equal(fileBaseName(session), '2026-11-05_claude_6ca14529');
+test('fileBaseName uses local start date and time, agent and 8-char id', () => {
+  assert.equal(fileBaseName(session), '2026-11-05_1000_claude_6ca14529');
+  assert.equal(fileBaseName({ ...session, startedAt: new Date(2026, 10, 5, 9, 7) }), '2026-11-05_0907_claude_6ca14529');
 });
 
-test('fileBaseName falls back to today when startedAt is null', () => {
+test('legacyBaseName is the old date-only name', () => {
+  assert.equal(legacyBaseName(session), '2026-11-05_claude_6ca14529');
+});
+
+test('fileBaseName falls back to today without a time when startedAt is null', () => {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   assert.equal(fileBaseName({ ...session, startedAt: null }), `${today}_claude_6ca14529`);
@@ -55,7 +60,7 @@ test('title is first user message, collapsed, escaped, max 80 chars', () => {
 });
 
 test('fileBaseName drops an agent prefix like ses_ before taking 8 chars', () => {
-  assert.equal(fileBaseName({ ...session, agent: 'opencode', sessionId: 'ses_15a464b39ffeDC4' }), '2026-11-05_opencode_15a464b3');
+  assert.equal(fileBaseName({ ...session, agent: 'opencode', sessionId: 'ses_15a464b39ffeDC4' }), '2026-11-05_1000_opencode_15a464b3');
 });
 
 test('toMarkdown writes a summary block before the first message', () => {

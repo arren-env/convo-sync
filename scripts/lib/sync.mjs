@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from './config.mjs';
 import { redact, redactJsonl } from './redact.mjs';
-import { toMarkdown, fileBaseName } from './render.mjs';
+import { toMarkdown, fileBaseName, legacyBaseName } from './render.mjs';
 import { gitFacts } from './git.mjs';
 import { parseClaude, locateClaude } from './adapters/claude.mjs';
 import { parseCodex, locateCodex, findCodexRollout } from './adapters/codex.mjs';
@@ -39,6 +39,21 @@ function writeAtomic(file, content) {
   } finally {
     // After a successful rename this is a no-op; after a failure it removes the leftover.
     try { fs.rmSync(tmp, { force: true }); } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Rename a note (and its .jsonl copy) written under the old date-only name, so an existing
+ * session keeps one file instead of gaining a second one under the new name.
+ */
+function migrateLegacyNote(outDir, oldBase, newBase) {
+  if (oldBase === newBase) return;
+  for (const ext of ['.md', '.jsonl']) {
+    const from = path.join(outDir, `${oldBase}${ext}`);
+    const to = path.join(outDir, `${newBase}${ext}`);
+    try {
+      if (fs.existsSync(from) && !fs.existsSync(to)) fs.renameSync(from, to);
+    } catch { /* leave it; the sync below still writes the new name */ }
   }
 }
 
@@ -90,6 +105,7 @@ export async function syncSession({ agent, payload, projectRoot, loaded }) {
   fs.mkdirSync(outDir, { recursive: true });
   const base = fileBaseName(session);
   const mdPath = path.join(outDir, `${base}.md`);
+  migrateLegacyNote(outDir, legacyBaseName(session), base);
   writeAtomic(mdPath, toMarkdown(session, config));
   if (config.copyRaw && raw != null) {
     writeAtomic(path.join(outDir, `${base}.jsonl`), config.redact ? redactJsonl(raw) : raw);

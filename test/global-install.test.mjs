@@ -132,7 +132,8 @@ test('CLI sync --agent codex reads the notify JSON from argv and finds the rollo
     { env: { ...process.env, CODEX_HOME: codexHome }, encoding: 'utf8', input: '' });
   assert.equal(r.status, 0);
   const notes = fs.readdirSync(path.join(e.projectRoot, '.agents', 'conversations'));
-  assert.deepEqual(notes, ['2026-10-26_codex_01a176cc.md']);
+  assert.equal(notes.length, 1);
+  assert.match(notes[0], /^2026-10-2\d_\d{4}_codex_01a176cc\.md$/);
 });
 
 // ---- OpenCode plugin works with the 1.x and 2.x client shapes ----

@@ -7,7 +7,7 @@ description: Use when the user wants to continue, resume or pick up work from an
 
 ## Overview
 
-convo-sync saves each agent session as one Markdown note in the project: `<project>/.agents/conversations/YYYY-MM-DD_<agent>_<id>.md`, refreshed after every turn. Any agent can read those notes back, so work started in one agent can continue in another.
+convo-sync saves each agent session as one Markdown note in the project: `<project>/.agents/conversations/YYYY-MM-DD_HHmm_<agent>_<id>.md` (local start time), refreshed after every turn. Any agent can read those notes back, so work started in one agent can continue in another.
 
 `SCRIPT` below means `scripts/convo-sync.mjs` next to this SKILL.md. Use its absolute path, run it through `node`, and run it from the project folder.
 

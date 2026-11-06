@@ -42,8 +42,10 @@ Prefer a fresh chat for catch-up: every extra tool call also re-sends earlier co
 One file per session:
 
 ```text
-.agents/conversations/2026-11-05_claude_6ca14529.md
+.agents/conversations/2026-11-05_1432_claude_6ca14529.md
 ```
+
+The date and time are when the session started, in local time. Notes written by older versions as `2026-11-05_claude_6ca14529.md` are renamed on their next sync.
 
 Each note includes:
 

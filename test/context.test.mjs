@@ -59,7 +59,7 @@ test('buildContext lists the newest conversations first, up to the limit', () =>
   const iAg = out.indexOf('antigravity');
   assert.ok(iCodex >= 0 && iAg > iCodex, out);
   // The third note is beyond the limit: listed by file only, its messages not included.
-  assert.match(out, /2026-11-01_claude_old11111\.md/);
+  assert.match(out, /2026-11-01_0900_claude_old11111\.md/);
   assert.ok(!out.includes('oldest request\n'), 'messages of notes beyond the limit are not included');
 });
 

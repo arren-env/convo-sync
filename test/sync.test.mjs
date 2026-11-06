@@ -34,7 +34,7 @@ test('writes markdown and raw copy into <root>/.agents/conversations', async () 
   const { mdPath } = await syncSession({ agent: 'claude', payload });
   const dir = path.join(proj, '.agents', 'conversations');
   assert.equal(path.dirname(mdPath), dir);
-  assert.match(path.basename(mdPath), /^\d{4}-\d{2}-\d{2}_claude_6ca14529\.md$/);
+  assert.match(path.basename(mdPath), /^\d{4}-\d{2}-\d{2}_\d{4}_claude_6ca14529\.md$/);
   assert.match(fs.readFileSync(mdPath, 'utf8'), /## User\n\nhi/);
   assert.ok(fs.existsSync(mdPath.replace(/\.md$/, '.jsonl')));
 });
@@ -46,6 +46,19 @@ test('syncing twice keeps exactly one note', async () => {
   const files = fs.readdirSync(path.join(proj, '.agents', 'conversations'));
   assert.equal(files.filter((f) => f.endsWith('.md')).length, 1);
   assert.equal(files.filter((f) => f.endsWith('.tmp')).length, 0);
+});
+
+test('a note under the old date-only name is renamed, not duplicated', async () => {
+  const { proj, payload } = setup();
+  fs.writeFileSync(path.join(proj, '.convo-sync.json'), '{"copyRaw":true}');
+  const first = await syncSession({ agent: 'claude', payload });
+  const dir = path.dirname(first.mdPath);
+  const legacy = path.basename(first.mdPath).replace(/_\d{4}_claude_/, '_claude_');
+  fs.renameSync(first.mdPath, path.join(dir, legacy));
+  fs.renameSync(first.mdPath.replace(/\.md$/, '.jsonl'), path.join(dir, legacy.replace(/\.md$/, '.jsonl')));
+  const { mdPath } = await syncSession({ agent: 'claude', payload });
+  assert.equal(mdPath, first.mdPath);
+  assert.deepEqual(fs.readdirSync(dir).sort(), [path.basename(mdPath), path.basename(mdPath).replace(/\.md$/, '.jsonl')].sort());
 });
 
 test('project config changes output dir; raw copy is off by default', async () => {
