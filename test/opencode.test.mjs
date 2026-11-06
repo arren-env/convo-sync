@@ -97,3 +97,35 @@ test('plugin template is valid JS that exports a ConvoSync plugin', async () => 
   assert.equal(typeof hooks.event, 'function');
   await hooks.event({ event: { type: 'message.updated', properties: {} } }); // ignored, must not throw
 });
+
+test('parseOpenCode maps OpenCode 2.x session.context messages', () => {
+  const v2 = [
+    { id: 'm0', type: 'agent-selected', time: { created: 1792994458000 } },
+    { id: 'm1', type: 'user', text: 'hi', time: { created: 1792994458378 } },
+    { id: 'm2', type: 'synthetic', text: 'injected ctx', time: { created: 1792994458400 } },
+    {
+      id: 'm3', type: 'assistant', time: { created: 1792994460490 },
+      content: [
+        { type: 'reasoning', text: 'hmm' },
+        { type: 'tool', id: 't1', name: 'bash', state: { status: 'completed' }, time: { created: 1 } },
+        { type: 'text', text: 'hello' },
+      ],
+    },
+    { id: 'm4', type: 'idle', outcome: 'succeeded', time: { created: 1792994461000 } },
+  ];
+  const s = parseOpenCode({ sessionId: 'ses_v2', cwd: '/p', messages: v2 });
+  assert.deepEqual(s.messages.map(({ at, ...m }) => m), expected);
+  assert.equal(s.startedAt.getTime(), 1792994458000);
+});
+
+test('plugin template has the OpenCode 2.x default export { id, setup }', async () => {
+  const e = env();
+  const r = install({ agent: 'opencode', scope: 'project', ...e });
+  const mod = await import('file://' + r.file.split(path.sep).join('/'));
+  assert.equal(typeof mod.default?.id, 'string');
+  assert.equal(typeof mod.default?.setup, 'function');
+  // An event stream that ends immediately: setup must not throw and must return a cleanup.
+  const cleanup = await mod.default.setup({ event: { subscribe: () => ({ async *[Symbol.asyncIterator]() {} }) } });
+  assert.equal(typeof cleanup, 'function');
+  await cleanup();
+});

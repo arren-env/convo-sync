@@ -88,7 +88,7 @@ Redaction is best-effort. Review notes before you commit them, or add the output
 | Claude Code | `Stop` hook | `~/.claude/settings.json` |
 | Codex | `notify` command | `~/.codex/config.toml` |
 | Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` |
-| OpenCode | plugin, `session.idle` | `~/.config/opencode/plugins/convo-sync.js` |
+| OpenCode | plugin: `session.execution.*` (2.x), `session.idle` (1.x) | `~/.config/opencode/plugins/convo-sync.js` |
 | GitHub Copilot (CLI and VS Code chat) | `agentStop` hook | `~/.copilot/hooks/convo-sync.json` (`$COPILOT_HOME/hooks` if set) |
 
 Codex allows only one `notify` command. If you already have one, the installer leaves it alone and says so.
@@ -98,12 +98,19 @@ Codex allows only one `notify` command. If you already have one, the installer l
 - Transcript formats are internal to each agent. An update can change them. Parsers skip unknown data and never block the agent, but a note may be incomplete until the adapter is updated.
 - Claude Code subagent (sidechain) messages and Codex history replayed after compaction are left out.
 - Past sessions are not imported. Notes start from the first turn after install.
-- Live-verified on Windows: Antigravity CLI, Codex (`notify`), and Copilot CLI 1.0.105 (`agentStop`). Claude Code, OpenCode, and Copilot in VS Code are verified on real transcripts and tests, but not yet in a live hook run.
+- Live-verified on Windows: Antigravity CLI, Codex (`notify`), Copilot CLI 1.0.105 (`agentStop`), and OpenCode 2.2.5. Claude Code and Copilot in VS Code are verified on real transcripts and tests, but not yet in a live hook run. OpenCode 1.x support is covered by tests only.
+- OpenCode 2.x notes come from the session's current context, so after a compaction a note may not include the earliest turns.
 - Copilot in VS Code works for the **Copilot** session target. The older **Local** target uses a different transcript format and is not supported.
 
 ## Troubleshooting
 
 Hooks always exit 0 and print `{}`, so they never interrupt your agent. Errors go to `<OS temp dir>/convo-sync.log`. Set `CONVO_SYNC_DEBUG=1` to log every sync.
+
+If OpenCode 2.x shows "Plugin must export a default definition with an id and an effect or setup function", the installed plugin predates 2.x support. Update convo-sync, then rewrite the plugin file:
+
+```bash
+node path/to/convo-sync/scripts/convo-sync.mjs install --agent opencode
+```
 
 ## Development
 

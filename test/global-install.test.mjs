@@ -142,7 +142,7 @@ async function runPlugin(clientMessages) {
   const marker = path.join(e.tmp, 'payload-copy.json');
   const probe = path.join(e.tmp, 'probe.mjs');
   // Stand-in for convo-sync.mjs: copy the payload file it is handed.
-  fs.writeFileSync(probe, `import fs from 'node:fs'; const i = process.argv.indexOf('--payload-file'); fs.copyFileSync(process.argv[i + 1], ${JSON.stringify(marker)});`);
+  fs.writeFileSync(probe, `import fs from 'node:fs'; const i = process.argv.indexOf('--payload-file'); fs.renameSync(process.argv[i + 1], ${JSON.stringify(marker)});`);
   const r = install({ agent: 'opencode', scope: 'project', ...e, scriptPath: probe });
   const mod = await import('file://' + r.file.split(path.sep).join('/'));
   const hooks = await mod.ConvoSync({ client: { session: { messages: clientMessages } }, directory: e.projectRoot });
@@ -161,4 +161,38 @@ test('opencode plugin works with the 1.x client ({ path: { id } })', async () =>
 test('opencode plugin works with the 2.x client ({ sessionID })', async () => {
   const got = await runPlugin(async (o) => (o?.sessionID === 'ses_x' && !o.path ? { data } : { error: 'bad request' }));
   assert.deepEqual(got?.messages, data);
+});
+
+test('opencode plugin (2.x default export) syncs on session.execution.succeeded', async () => {
+  const e = env();
+  const marker = path.join(e.tmp, 'payload-copy-v2.json');
+  const probe = path.join(e.tmp, 'probe-v2.mjs');
+  fs.writeFileSync(probe, `import fs from 'node:fs'; const i = process.argv.indexOf('--payload-file'); fs.renameSync(process.argv[i + 1], ${JSON.stringify(marker)});`);
+  const r = install({ agent: 'opencode', scope: 'project', ...e, scriptPath: probe });
+  const mod = await import('file://' + r.file.split(path.sep).join('/') + '?v2');
+  const v2 = [{ id: 'm1', type: 'user', text: 'hi', time: { created: 1 } }];
+  let subscribedTypes;
+  const ctx = {
+    location: { directory: '/fallback' },
+    event: {
+      subscribe: (o) => {
+        subscribedTypes = o?.types;
+        return (async function* () {
+          yield { type: 'session.execution.succeeded', data: { sessionID: 'ses_y' }, location: { directory: e.projectRoot } };
+        })();
+      },
+    },
+    session: {
+      context: async (o) => (o?.sessionID === 'ses_y' ? v2 : []),
+      get: async () => ({}),
+    },
+  };
+  const cleanup = await mod.default.setup(ctx);
+  for (let i = 0; i < 100 && !fs.existsSync(marker); i++) await new Promise((res) => setTimeout(res, 100));
+  await cleanup();
+  assert.ok(subscribedTypes.includes('session.execution.succeeded'));
+  const got = fs.existsSync(marker) ? JSON.parse(fs.readFileSync(marker, 'utf8')) : null;
+  assert.deepEqual(got?.messages, v2);
+  assert.equal(got?.sessionId, 'ses_y');
+  assert.equal(got?.cwd, e.projectRoot);
 });
