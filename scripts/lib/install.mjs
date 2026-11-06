@@ -8,7 +8,7 @@ const GROUP = 'convo-sync'; // Antigravity hook group name
 const PLUGIN_MARKER = '@convo-sync-plugin';
 const PLUGIN_TEMPLATE = fileURLToPath(new URL('../opencode-plugin.js', import.meta.url));
 
-export const INSTALLABLE = ['claude', 'codex', 'antigravity', 'opencode', 'copilot'];
+export const INSTALLABLE = ['claude', 'codex', 'antigravity', 'opencode', 'copilot', 'cursor'];
 
 export function hookCommand(scriptPath, agent) {
   // Forward slashes work for Node on every OS. Quote only when needed: Antigravity on
@@ -25,6 +25,7 @@ const AGENT_HOMES = {
   antigravity: (home) => path.join(home, '.gemini'),
   opencode: (home) => path.join(home, '.config', 'opencode'),
   copilot: (home) => process.env.COPILOT_HOME || path.join(home, '.copilot'),
+  cursor: (home) => path.join(home, '.cursor'),
 };
 
 /** Agents installed on this machine, in INSTALLABLE order. */
@@ -42,6 +43,8 @@ export function targetFile(agent, scope, projectRoot, home) {
     case 'opencode': return user ? path.join(home, '.config', 'opencode', 'plugins', 'convo-sync.js') : path.join(projectRoot, '.opencode', 'plugins', 'convo-sync.js');
     // Copilot CLI and VS Code (Copilot harness) both read ~/.copilot/hooks/*.json and .github/hooks/*.json.
     case 'copilot': return user ? path.join(AGENT_HOMES.copilot(home), 'hooks', 'convo-sync.json') : path.join(projectRoot, '.github', 'hooks', 'convo-sync.json');
+    // Cursor's hooks file is shared with the user's other hooks, so we merge into it.
+    case 'cursor': return user ? path.join(home, '.cursor', 'hooks.json') : path.join(projectRoot, '.cursor', 'hooks.json');
     default: throw new Error(`unknown agent: ${agent}`);
   }
 }
@@ -112,7 +115,29 @@ const antigravityStyle = {
   },
 };
 
-const STYLES = { claude: stopStyle, antigravity: antigravityStyle };
+// ---- Cursor: { version: 1, hooks: { stop: [handler] } } in .cursor/hooks.json ----
+const cursorStyle = {
+  has(cfg) {
+    return (cfg.hooks?.stop || []).some(isOurs);
+  },
+  add(cfg, command) {
+    cfg.version ??= 1;
+    cfg.hooks ??= {};
+    cfg.hooks.stop ??= [];
+    cfg.hooks.stop.push({ command, timeout: 30 });
+  },
+  remove(cfg) {
+    const stop = cfg.hooks?.stop;
+    if (!Array.isArray(stop)) return;
+    cfg.hooks.stop = stop.filter((h) => !isOurs(h));
+    if (!cfg.hooks.stop.length) delete cfg.hooks.stop;
+    if (!Object.keys(cfg.hooks).length) delete cfg.hooks;
+    // Only a version key left means the file held nothing but our hook.
+    if (Object.keys(cfg).length === 1 && 'version' in cfg) delete cfg.version;
+  },
+};
+
+const STYLES = { claude: stopStyle, antigravity: antigravityStyle, cursor: cursorStyle };
 
 // ---- Codex: top-level `notify = [...]` in ~/.codex/config.toml ----
 // Codex Stop hooks did not fire in live tests (Codex 0.164, Windows); `notify` did, and

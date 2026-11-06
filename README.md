@@ -2,7 +2,7 @@
 
 Save each AI coding-agent session as a Markdown note in your project, after every turn. Switch agents later, ask to continue, and the next agent reads those notes instead of starting from zero.
 
-Works with Claude Code, OpenAI Codex, Google Antigravity, OpenCode, and GitHub Copilot (CLI and VS Code chat). Runs on Windows, macOS, and Linux. Needs Node.js 22+. Stays local: no network calls, no automatic git commits.
+Works with Claude Code, OpenAI Codex, Google Antigravity, OpenCode, GitHub Copilot (CLI and VS Code chat), and Cursor (editor and CLI). Runs on Windows, macOS, and Linux. Needs Node.js 22+. Stays local: no network calls, no automatic git commits.
 
 ## Install
 
@@ -27,7 +27,7 @@ node path/to/convo-sync/scripts/convo-sync.mjs status
 node path/to/convo-sync/scripts/convo-sync.mjs uninstall
 ```
 
-Limit either command with `--agent <claude|codex|antigravity|opencode|copilot>`. Use `--scope project` to install only for the current repo (Claude Code, Antigravity, OpenCode, and Copilot via `.github/hooks/convo-sync.json`).
+Limit either command with `--agent <claude|codex|antigravity|opencode|copilot|cursor>`. Use `--scope project` to install only for the current repo (Claude Code, Antigravity, OpenCode, Copilot via `.github/hooks/convo-sync.json`, and Cursor via `.cursor/hooks.json`).
 
 ## Continue in another agent
 
@@ -49,7 +49,7 @@ The date and time are when the session started, in local time. Notes written by 
 
 Each note includes:
 
-- Frontmatter: `title`, `agent`, `client` (Copilot: `cli` or `vscode`), `session_id`, `project`, `created`, `updated`, `tags`
+- Frontmatter: `title`, `agent`, `client` (Copilot: `cli` or `vscode`; Cursor: `cli` or `editor`), `session_id`, `project`, `created`, `updated`, `tags`
 - A `## Summary` block rebuilt on every sync (no model call): goal, latest status, commits since start, uncommitted files, and compacted-context text when the agent wrote one
 - The turn transcript as `## User` / `## Assistant` sections
 
@@ -92,6 +92,7 @@ Redaction is best-effort. Review notes before you commit them, or add the output
 | Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` |
 | OpenCode | plugin: `session.execution.*` (2.x), `session.idle` (1.x) | `~/.config/opencode/plugins/convo-sync.js` |
 | GitHub Copilot (CLI and VS Code chat) | `agentStop` hook | `~/.copilot/hooks/convo-sync.json` (`$COPILOT_HOME/hooks` if set) |
+| Cursor (editor and CLI) | `stop` hook | `~/.cursor/hooks.json` (merged with your existing hooks) |
 
 Codex allows only one `notify` command. If you already have one, the installer leaves it alone and says so.
 
@@ -102,6 +103,7 @@ Codex allows only one `notify` command. If you already have one, the installer l
 - Past sessions are not imported. Notes start from the first turn after install.
 - Live-verified on Windows: Antigravity CLI, Codex (`notify`), Copilot CLI 1.0.105 (`agentStop`), and OpenCode 2.2.5. Claude Code and Copilot in VS Code are verified on real transcripts and tests, but not yet in a live hook run. OpenCode 1.x support is covered by tests only.
 - OpenCode 2.x notes come from the session's current context, so after a compaction a note may not include the earliest turns.
+- Cursor is verified on real transcripts and tests, not yet in a live hook run. Cursor's docs don't say whether the CLI runs hooks; if CLI sessions produce no notes, that is the reason. Cursor transcripts have no per-message times, so times come from the timestamp Cursor adds to each user turn and the file's modified time. A session is marked `cli` when Cursor keeps a CLI chat folder for it (`~/.cursor/chats`); this is inferred from the folder layout, not documented.
 - Copilot in VS Code works for the **Copilot** session target. The older **Local** target uses a different transcript format and is not supported.
 
 ## Troubleshooting

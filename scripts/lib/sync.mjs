@@ -9,14 +9,16 @@ import { parseCodex, locateCodex, findCodexRollout } from './adapters/codex.mjs'
 import { parseAntigravity, locateAntigravity } from './adapters/antigravity.mjs';
 import { parseOpenCode } from './adapters/opencode.mjs';
 import { parseCopilot, locateCopilot, findCopilotEvents, copilotClient } from './adapters/copilot.mjs';
+import { parseCursor, locateCursor, findCursorTranscript, cursorClient, cursorFileTimes } from './adapters/cursor.mjs';
 
-export const AGENTS = ['claude', 'codex', 'antigravity', 'opencode', 'copilot'];
+export const AGENTS = ['claude', 'codex', 'antigravity', 'opencode', 'copilot', 'cursor'];
 
 const FILE_ADAPTERS = {
   claude: { parse: parseClaude, locate: locateClaude },
   codex: { parse: parseCodex, locate: locateCodex, fallback: (loc) => findCodexRollout(loc.sessionId) },
   antigravity: { parse: parseAntigravity, locate: locateAntigravity },
   copilot: { parse: parseCopilot, locate: locateCopilot, fallback: (loc) => findCopilotEvents(loc.sessionId), client: copilotClient },
+  cursor: { parse: parseCursor, locate: locateCursor, fallback: (loc) => findCursorTranscript(loc.sessionId), client: cursorClient, times: cursorFileTimes, requireCwd: true },
 };
 
 /** Walk up from cwd to the first directory containing .git; otherwise cwd itself. */
@@ -76,6 +78,9 @@ function loadSession(agent, payload) {
   if (loc.cwd) session.cwd = loc.cwd;
   if (loc.sessionId) session.sessionId = loc.sessionId;
   if (adapter.client) session.client = adapter.client(transcriptPath);
+  if (adapter.times) adapter.times(session, transcriptPath);
+  // Cursor runs user hooks from ~/.cursor; without a workspace root we'd write notes there.
+  if (adapter.requireCwd && !session.cwd) return null;
   return { session, raw };
 }
 

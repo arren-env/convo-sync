@@ -1,7 +1,7 @@
 /**
  * Shared session model used by every adapter.
  *
- * @typedef {'claude'|'codex'|'antigravity'|'opencode'|'copilot'} Agent
+ * @typedef {'claude'|'codex'|'antigravity'|'opencode'|'copilot'|'cursor'} Agent
  * @typedef {{ role: 'user'|'assistant', text: string, thinking?: string, tools?: string[], at?: Date }} Message
  * @typedef {{ agent: Agent, sessionId: string, cwd: string|null, startedAt: Date|null, updatedAt: Date|null, messages: Message[],
  *   compactSummary?: string, git?: {commits: string[], files: string[]} }} Session

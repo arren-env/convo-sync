@@ -1,6 +1,6 @@
 ---
 name: convo-sync
-description: Use when the user wants to continue, resume or pick up work from an earlier conversation with any AI agent (Claude Code, Codex, Antigravity, OpenCode, GitHub Copilot CLI or VS Code chat), asks what was done before, or wants agent conversations saved, synced or archived as Markdown, or asks to set up, check or turn off automatic conversation logging.
+description: Use when the user wants to continue, resume or pick up work from an earlier conversation with any AI agent (Claude Code, Codex, Antigravity, OpenCode, GitHub Copilot CLI or VS Code chat, Cursor editor or CLI), asks what was done before, or wants agent conversations saved, synced or archived as Markdown, or asks to set up, check or turn off automatic conversation logging.
 ---
 
 # convo-sync
@@ -46,7 +46,7 @@ Do not ask the user to edit config files, enable features, or change their proje
 |---|---|
 | Check what's installed | `node "<SCRIPT>" status` |
 | Turn off everywhere | `node "<SCRIPT>" uninstall` |
-| Only one agent | add `--agent <claude\|codex\|antigravity\|opencode\|copilot>` |
+| Only one agent | add `--agent <claude\|codex\|antigravity\|opencode\|copilot\|cursor>` |
 | Only the current project (all but Codex) | add `--scope project` |
 
 ## Settings (optional): `.convo-sync.json` in a project root

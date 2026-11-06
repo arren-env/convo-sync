@@ -5,7 +5,7 @@
 //   node convo-sync.mjs uninstall [--agent <name|all>] [--scope user|project]
 //   node convo-sync.mjs status
 //   node convo-sync.mjs context   [--limit <n>] [--max-chars <n>] [--full]
-//   node convo-sync.mjs sync --agent <claude|codex|antigravity|opencode|copilot> [--payload-file <f>]
+//   node convo-sync.mjs sync --agent <claude|codex|antigravity|opencode|copilot|cursor> [--payload-file <f>]
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -92,7 +92,7 @@ function usage() {
     '  uninstall [--agent <name|all>] [--scope user|project]\n' +
     '  status\n' +
     '  context   [--limit <n>] [--max-chars <n>] [--full]   summaries of the latest saved conversations (--full: their messages)\n' +
-    '  sync --agent <claude|codex|antigravity|opencode|copilot> [--payload-file <f>]   (called by the hooks)\n',
+    '  sync --agent <claude|codex|antigravity|opencode|copilot|cursor> [--payload-file <f>]   (called by the hooks)\n',
   );
 }
 
@@ -107,7 +107,7 @@ function runInstall(command, flags) {
     process.exit(1);
   }
   if (!agents.length) {
-    process.stdout.write('No supported agents found (looked for ~/.claude, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot).\n');
+    process.stdout.write('No supported agents found (looked for ~/.claude, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.cursor).\n');
     return;
   }
   const ctx = { scope, projectRoot: projectRootFor(process.cwd()), home, scriptPath: SCRIPT_PATH };
