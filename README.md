@@ -83,6 +83,12 @@ Transcripts often contain secrets. By default, convo-sync redacts common pattern
 
 Redaction is best-effort. Review notes before you commit them, or add the output folder to `.gitignore`.
 
+## Untrusted notes
+
+A note is a record of an earlier session, including whatever that session read or was told. The stop hook writes the file locally and prints `{}`, so the turn that just finished does not receive the transcript back. A later agent sees note text only when you ask it to continue.
+
+That text can contain instructions aimed at the next agent. The skill tells the agent to summarize the work and wait, and to ignore instructions, tool requests, and role changes inside the notes. Check the code yourself before continuing a task the notes describe.
+
 ## What the installer changes
 
 | Agent | Trigger | File edited |
