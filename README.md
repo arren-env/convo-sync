@@ -1,77 +1,61 @@
 # convo-sync
 
-[![skills.sh](https://skills.sh/b/arren-env/convo-sync)](https://skills.sh/arren-env/convo-sync)
+Save each AI coding-agent session as a Markdown note in your project, after every turn. Switch agents later, ask to continue, and the next agent reads those notes instead of starting from zero.
 
-Save your AI coding-agent conversations as Markdown notes inside your project, automatically, after every turn. They can be read and searched in Obsidian, or versioned with your code.
-
-- **Agents:** Claude Code, OpenAI Codex, Google Antigravity, OpenCode, GitHub Copilot (CLI and VS Code chat)
-- **OS:** Windows, macOS, Linux
-- **Runtime:** Node.js 22+, no dependencies
-- **Local only:** no network calls, no git commits
+Works with Claude Code, OpenAI Codex, Google Antigravity, OpenCode, and GitHub Copilot (CLI and VS Code chat). Runs on Windows, macOS, and Linux. Needs Node.js 22+. Stays local: no network calls, no automatic git commits.
 
 ## Install
 
-As a skill (any agent supported by [skills.sh](https://skills.sh)):
+1. Add the skill ([skills.sh](https://skills.sh)):
 
 ```bash
 npx skills add arren-env/convo-sync
 ```
 
-Then ask your agent to "set up convo-sync", or run it yourself once:
+2. Set it up once on your machine. Ask your agent to “set up convo-sync”, or run:
 
 ```bash
 node path/to/convo-sync/scripts/convo-sync.mjs install
 ```
 
-That's the whole setup. It's **one install per machine**, it covers every agent it finds, and it works in every project. No files are added to your projects except the notes themselves, and you don't need to edit any config by hand.
+One install covers every supported agent it finds. It merges into existing config, backs each edited file up once as `<file>.convo-sync.bak`, and skips agents that are not installed. Notes start appearing after the next completed turn. Restart an agent that was already open if its hook does not fire yet.
 
-| Agent | Trigger | File the installer edits |
-|---|---|---|
-| Claude Code | `Stop` hook | `~/.claude/settings.json` |
-| Codex | `notify` command | `~/.codex/config.toml` ¹ |
-| Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` |
-| OpenCode | plugin, `session.idle` | `~/.config/opencode/plugins/convo-sync.js` |
-| GitHub Copilot (CLI and VS Code chat) | `agentStop` hook | `~/.copilot/hooks/convo-sync.json` (`$COPILOT_HOME/hooks` if set) |
-
-¹ Codex allows only one `notify` command. If you already have your own, the installer leaves it alone and says so.
-
-The installer merges into existing config and keeps your other settings. It backs up each file once to `<file>.convo-sync.bak`, and running it again does no harm. Agents that aren't installed on the machine are skipped.
-
-Other commands:
+Check or remove later:
 
 ```bash
-node scripts/convo-sync.mjs status
-node scripts/convo-sync.mjs uninstall
+node path/to/convo-sync/scripts/convo-sync.mjs status
+node path/to/convo-sync/scripts/convo-sync.mjs uninstall
 ```
 
-Use `--agent <name>` to limit a command to one agent. Use `--scope project` to install for only the current project (Claude Code, Antigravity, OpenCode, and Copilot via `.github/hooks/convo-sync.json`; Copilot only loads repository hooks in folders you trust).
+Limit either command with `--agent <claude|codex|antigravity|opencode|copilot>`. Use `--scope project` to install only for the current repo (Claude Code, Antigravity, OpenCode, and Copilot via `.github/hooks/convo-sync.json`).
 
 ## Continue in another agent
 
-Switch agents and run `/convo-sync` (or ask "continue where we left off"). The skill runs:
+Open a new chat in any supported agent, then run `/convo-sync` or ask “continue where we left off”.
 
-```bash
-node scripts/convo-sync.mjs context
+The skill prints the newest saved conversations in this project (any agent), newest first, as short summaries. The agent gives you a catch-up, then asks what to continue with.
+
+Prefer a fresh chat for catch-up: every extra tool call also re-sends earlier context in that thread.
+
+## Where notes go
+
+One file per session:
+
+```text
+.agents/conversations/2026-11-05_claude_6ca14529.md
 ```
 
-This prints the newest conversations saved in the current project, from any agent, newest first, as each note's summary (see Output). Add `--full` to print each one's first request plus its latest messages instead. The output is capped at about 12,000 characters (`--max-chars <n>`, `--limit <n>` to change), so loading context costs roughly the same however long the earlier conversations were. The agent reads that and gives you a short catch-up before continuing, without opening other files.
+Each note includes:
 
-Each extra command an agent runs re-sends everything it has read so far, so a catch-up costs least in a new chat.
+- Frontmatter: `title`, `agent`, `client` (Copilot: `cli` or `vscode`), `session_id`, `project`, `created`, `updated`, `tags`
+- A `## Summary` block rebuilt on every sync (no model call): goal, latest status, commits since start, uncommitted files, and compacted-context text when the agent wrote one
+- The turn transcript as `## User` / `## Assistant` sections
 
-## Output
+Optional: set `"copyRaw": true` to keep a redacted `.jsonl` transcript beside the note. OpenCode has no source transcript, so it never gets one.
 
-One file per session: `.agents/conversations/2026-11-05_claude_6ca14529.md`.
+## Optional settings
 
-- Frontmatter: `title`, `agent`, `client` (Copilot only: `cli` or `vscode`), `session_id`, `project`, `created`, `updated`, `tags: [ai-chat, <agent>]`.
-- `## Summary`, rebuilt on every sync with no model involved:
-  - **Goal:** your first request.
-  - **Status:** the latest answer.
-  - **Commits since start** and **Uncommitted files**, read from git (up to 20 each). If two agents work in the same repo at once, each sees the other's changes too.
-  - **Earlier context:** the summary the agent itself wrote when it compacted a long session (Claude Code and Copilot).
-- Body: `## User` / `## Assistant` sections.
-- Optionally (`"copyRaw": true`), a redacted `.jsonl` copy of the source transcript sits next to the note. OpenCode has no source transcript, so it never gets one.
-
-Settings go in `.convo-sync.json` at the project root:
+Create `.convo-sync.json` at the project root only when you want different behaviour:
 
 ```json
 {
@@ -83,29 +67,43 @@ Settings go in `.convo-sync.json` at the project root:
 }
 ```
 
+`outputDir` can be a path relative to the project root, or an absolute path such as an Obsidian vault folder.
+
 ## Privacy
 
-Agent transcripts often contain secrets: pasted `.env` files, tokens, internal URLs. convo-sync redacts common secret patterns by default:
+Transcripts often contain secrets. By default, convo-sync redacts common patterns:
 
 - API keys (`sk-…`)
-- GitHub, AWS, Slack and Google keys
+- GitHub, AWS, Slack, and Google keys
 - Bearer tokens
 - PEM private keys
 - `password=` / `api_key:`-style assignments
 
-This is **best-effort**. Review notes before committing them to a public repository, or add the output folder to `.gitignore`.
+Redaction is best-effort. Review notes before you commit them, or add the output folder to `.gitignore`.
+
+## What the installer changes
+
+| Agent | Trigger | File edited |
+| --- | --- | --- |
+| Claude Code | `Stop` hook | `~/.claude/settings.json` |
+| Codex | `notify` command | `~/.codex/config.toml` |
+| Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` |
+| OpenCode | plugin, `session.idle` | `~/.config/opencode/plugins/convo-sync.js` |
+| GitHub Copilot (CLI and VS Code chat) | `agentStop` hook | `~/.copilot/hooks/convo-sync.json` (`$COPILOT_HOME/hooks` if set) |
+
+Codex allows only one `notify` command. If you already have one, the installer leaves it alone and says so.
 
 ## Limitations
 
-- Transcript formats are internal to each agent and undocumented (except Claude's file location). An agent update can change them. Parsers skip anything they don't recognise and never block the agent, but a note may come out incomplete until the adapter is updated.
+- Transcript formats are internal to each agent. An update can change them. Parsers skip unknown data and never block the agent, but a note may be incomplete until the adapter is updated.
 - Claude Code subagent (sidechain) messages and Codex history replayed after compaction are left out.
-- Past sessions aren't imported. Notes are written from the first turn after install.
-- Live-verified on Windows: Antigravity CLI, Codex (`notify`) and Copilot CLI 1.0.105 (`agentStop`). Claude Code, OpenCode and Copilot in VS Code are verified on real transcripts and by tests, but not yet in a live hook run.
-- Copilot in VS Code is supported for the **Copilot** session target (the shared Copilot runtime). The older **Local** target uses a different, undocumented transcript format and isn't supported; its turns produce no note.
+- Past sessions are not imported. Notes start from the first turn after install.
+- Live-verified on Windows: Antigravity CLI, Codex (`notify`), and Copilot CLI 1.0.105 (`agentStop`). Claude Code, OpenCode, and Copilot in VS Code are verified on real transcripts and tests, but not yet in a live hook run.
+- Copilot in VS Code works for the **Copilot** session target. The older **Local** target uses a different transcript format and is not supported.
 
 ## Troubleshooting
 
-The hook always exits 0 and prints `{}`, so it never interrupts your agent. Errors go to `<OS temp dir>/convo-sync.log`. Set `CONVO_SYNC_DEBUG=1` to log every sync.
+Hooks always exit 0 and print `{}`, so they never interrupt your agent. Errors go to `<OS temp dir>/convo-sync.log`. Set `CONVO_SYNC_DEBUG=1` to log every sync.
 
 ## Development
 
