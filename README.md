@@ -1,5 +1,7 @@
 # convo-sync
 
+[![skills.sh](https://skills.sh/b/arren-env/convo-sync)](https://skills.sh/arren-env/convo-sync)
+
 Save each AI coding-agent session as a Markdown note in your project, after every turn. Switch agents later, ask to continue, and the next agent reads those notes instead of starting from zero.
 
 Works with Claude Code, OpenAI Codex, Google Antigravity, OpenCode, GitHub Copilot (CLI and VS Code chat), and Cursor (editor and CLI). Runs on Windows, macOS, and Linux. Needs Node.js 22+. Stays local: no network calls, no automatic git commits.
