@@ -93,11 +93,23 @@ export function parseAntigravity(text, meta = {}) {
   };
 }
 
+/**
+ * The ACP server (agy_acp_server, used by T3 Code) sends transcriptPath as
+ * <app_data>/conversations/<id>.db, a SQLite trajectory. The readable JSONL lives at
+ * <app_data>/brain/<id>/.system_generated/logs/transcript.jsonl.
+ */
+function brainTranscriptFor(transcriptPath, sessionId) {
+  if (!transcriptPath || path.extname(transcriptPath).toLowerCase() !== '.db') return transcriptPath;
+  const id = sessionId || path.basename(transcriptPath, path.extname(transcriptPath));
+  const appData = path.dirname(path.dirname(transcriptPath));
+  return path.join(appData, 'brain', id, '.system_generated', 'logs', 'transcript.jsonl');
+}
+
 /** Antigravity hook payload (camelCase, on stdin). */
 export function locateAntigravity(payload = {}) {
-  const transcriptPath = payload.transcriptPath || null;
-  const fromPath = transcriptPath?.match(BRAIN_ID)?.[1] || null;
+  const fromPath = payload.transcriptPath?.match(BRAIN_ID)?.[1] || null;
   const sessionId = payload.conversationId || fromPath;
+  const transcriptPath = brainTranscriptFor(payload.transcriptPath || null, sessionId);
   const fromWorkspace = Array.isArray(payload.workspacePaths) && payload.workspacePaths[0]
     ? payload.workspacePaths[0]
     : null;

@@ -56,3 +56,21 @@ test('findAntigravityTranscript and cwdFromAntigravityMeta read T3-style layout'
   assert.equal(cwdFromAntigravityMeta(transcript, id), 'C:\\proj');
   assert.equal(locateAntigravity({ transcriptPath: transcript }).cwd, 'C:\\proj');
 });
+
+test('locateAntigravity maps the ACP server conversations/<id>.db path to the brain transcript', () => {
+  // T3 Code runs agy_acp_server, whose PostInvocation payload points transcriptPath at a SQLite file.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cs-ag-'));
+  const id = '146744c2-d904-473e-8478-815ebd4f86ca';
+  const app = path.join(home, 'antigravity-acp');
+  const transcript = path.join(app, 'brain', id, '.system_generated', 'logs', 'transcript.jsonl');
+  fs.mkdirSync(path.dirname(transcript), { recursive: true });
+  fs.writeFileSync(transcript, '{}\n');
+  fs.mkdirSync(path.join(app, 'conversations'), { recursive: true });
+  const db = path.join(app, 'conversations', `${id}.db`);
+  fs.writeFileSync(db, 'SQLite format 3\0');
+  fs.writeFileSync(path.join(app, 'conversations', `${id}.meta`), JSON.stringify({ cwd: 'C:\\proj' }));
+  assert.deepEqual(
+    locateAntigravity({ conversationId: id, transcriptPath: db, workspacePaths: ['C:\\w'] }),
+    { transcriptPath: transcript, sessionId: id, cwd: 'C:\\w' });
+  assert.equal(locateAntigravity({ conversationId: id, transcriptPath: db }).cwd, 'C:\\proj');
+});
