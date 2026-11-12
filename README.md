@@ -95,7 +95,7 @@ That text can contain instructions aimed at the next agent. The skill tells the 
 | --- | --- | --- |
 | Claude Code | `Stop` hook | `~/.claude/settings.json` |
 | Codex | `notify` command | `~/.codex/config.toml` |
-| Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` |
+| Antigravity | `PostInvocation` hook | `~/.gemini/config/hooks.json` (and each T3 Code profile under `~/.t3/userdata/providers/antigravity/*/config/hooks.json`, because T3 keeps a private `GEMINI_HOME` that does not load the user hooks file) |
 | OpenCode | plugin: `session.execution.*` (2.x), `session.idle` (1.x) | `~/.config/opencode/plugins/convo-sync.js` |
 | GitHub Copilot (CLI and VS Code chat) | `agentStop` hook | `~/.copilot/hooks/convo-sync.json` (`$COPILOT_HOME/hooks` if set) |
 | Cursor (editor and CLI) | `stop` hook | `~/.cursor/hooks.json` (merged with your existing hooks) |

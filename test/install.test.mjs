@@ -90,6 +90,22 @@ test('antigravity install writes a named group with PostInvocation', () => {
   assert.equal(install({ agent: 'antigravity', scope: 'user', ...e }).file, path.join(e.home, '.gemini', 'config', 'hooks.json'));
 });
 
+test('antigravity user install also seeds T3 Code Antigravity profiles', () => {
+  const e = env();
+  const profileHook = path.join(e.home, '.t3', 'userdata', 'providers', 'antigravity', 'abc123', 'config', 'hooks.json');
+  fs.mkdirSync(path.dirname(profileHook), { recursive: true });
+  const r = install({ agent: 'antigravity', scope: 'user', ...e });
+  assert.equal(r.changed, true);
+  assert.match(r.note, /T3 Code Antigravity/);
+  assert.deepEqual(read(profileHook), {
+    'convo-sync': { enabled: true, PostInvocation: [{ type: 'command', command: cmd(e.scriptPath, 'antigravity'), timeout: 15 }] },
+  });
+  uninstall({ agent: 'antigravity', scope: 'user', ...e });
+  assert.equal(fs.existsSync(profileHook), false);
+  const rows = status({ projectRoot: e.projectRoot, home: e.home });
+  assert.equal(rows.some((row) => row.agent === 'antigravity' && row.scope === 't3' && row.file === profileHook), true);
+});
+
 test('antigravity uninstall keeps other groups', () => {
   const e = env();
   const f = path.join(e.projectRoot, '.agents', 'hooks.json');

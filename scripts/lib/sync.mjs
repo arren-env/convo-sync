@@ -6,7 +6,7 @@ import { toMarkdown, fileBaseName, legacyBaseName } from './render.mjs';
 import { gitFacts } from './git.mjs';
 import { parseClaude, locateClaude } from './adapters/claude.mjs';
 import { parseCodex, locateCodex, findCodexRollout } from './adapters/codex.mjs';
-import { parseAntigravity, locateAntigravity } from './adapters/antigravity.mjs';
+import { parseAntigravity, locateAntigravity, findAntigravityTranscript } from './adapters/antigravity.mjs';
 import { parseOpenCode } from './adapters/opencode.mjs';
 import { parseCopilot, locateCopilot, findCopilotEvents, copilotClient } from './adapters/copilot.mjs';
 import { parseCursor, locateCursor, findCursorTranscript, cursorClient, cursorFileTimes } from './adapters/cursor.mjs';
@@ -16,7 +16,7 @@ export const AGENTS = ['claude', 'codex', 'antigravity', 'opencode', 'copilot', 
 const FILE_ADAPTERS = {
   claude: { parse: parseClaude, locate: locateClaude },
   codex: { parse: parseCodex, locate: locateCodex, fallback: (loc) => findCodexRollout(loc.sessionId) },
-  antigravity: { parse: parseAntigravity, locate: locateAntigravity },
+  antigravity: { parse: parseAntigravity, locate: locateAntigravity, fallback: (loc) => findAntigravityTranscript(loc.sessionId) },
   copilot: { parse: parseCopilot, locate: locateCopilot, fallback: (loc) => findCopilotEvents(loc.sessionId), client: copilotClient },
   cursor: { parse: parseCursor, locate: locateCursor, fallback: (loc) => findCursorTranscript(loc.sessionId), client: cursorClient, times: cursorFileTimes, requireCwd: true },
 };

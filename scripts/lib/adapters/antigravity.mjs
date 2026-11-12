@@ -1,9 +1,68 @@
 // Antigravity transcripts: ~/.gemini/antigravity*/brain/<conversation-id>/.system_generated/logs/transcript.jsonl
+// T3 Code uses a private GEMINI_HOME under ~/.t3/userdata/providers/antigravity/<hash>/antigravity-acp/...
 // Format is undocumented; derived from observed files. Unknown lines are skipped.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { readJsonl, toDate, pushMessage, finalizeMessages } from '../session.mjs';
 
 const USER_REQUEST = /<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/;
+const INNER_USER_REQUEST = /<user_request>([\s\S]*?)<\/user_request>/i;
 const BRAIN_ID = /brain[\\/]([0-9a-fA-F-]{36})/;
+const SESSION_ID = /^[0-9a-fA-F-]{36}$/;
+
+/** Prefer the inner <user_request> T3 wraps inside USER_REQUEST; otherwise the whole block. */
+function userBody(content) {
+  const outer = content.match(USER_REQUEST);
+  const body = (outer ? outer[1] : content).trim();
+  const inner = body.match(INNER_USER_REQUEST);
+  return (inner ? inner[1] : body).trim();
+}
+
+/** App-data roots that can hold brain/<id>/.../transcript.jsonl. */
+export function antigravityDataRoots(home = os.homedir()) {
+  const roots = ['antigravity', 'antigravity-cli', 'antigravity-ide', 'antigravity-backup']
+    .map((name) => path.join(home, '.gemini', name));
+  const t3 = path.join(home, '.t3', 'userdata', 'providers', 'antigravity');
+  try {
+    for (const name of fs.readdirSync(t3)) {
+      const profile = path.join(t3, name);
+      for (const sub of ['antigravity-acp', 'antigravity-cli', 'antigravity']) {
+        roots.push(path.join(profile, sub));
+      }
+    }
+  } catch { /* no T3 profiles */ }
+  return roots;
+}
+
+/** Find transcript.jsonl for a conversation id across Gemini and T3 Code profiles. */
+export function findAntigravityTranscript(sessionId, home = os.homedir()) {
+  if (!sessionId || !SESSION_ID.test(sessionId)) return null;
+  for (const root of antigravityDataRoots(home)) {
+    const file = path.join(root, 'brain', sessionId, '.system_generated', 'logs', 'transcript.jsonl');
+    if (fs.existsSync(file)) return file;
+  }
+  return null;
+}
+
+/** cwd from <app_data>/conversations/<id>.meta beside the brain folder (T3 / CLI). */
+export function cwdFromAntigravityMeta(transcriptPath, sessionId) {
+  const id = sessionId || transcriptPath?.match(BRAIN_ID)?.[1];
+  if (!transcriptPath || !id) return null;
+  let dir = path.resolve(transcriptPath);
+  for (let i = 0; i < 8; i++) {
+    const parent = path.dirname(dir);
+    if (path.basename(dir) === 'brain') {
+      try {
+        const meta = JSON.parse(fs.readFileSync(path.join(parent, 'conversations', `${id}.meta`), 'utf8'));
+        return typeof meta.cwd === 'string' && meta.cwd ? meta.cwd : null;
+      } catch { return null; }
+    }
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 
 /** @returns {import('../session.mjs').Session} */
 export function parseAntigravity(text, meta = {}) {
@@ -15,8 +74,7 @@ export function parseAntigravity(text, meta = {}) {
     if (at) { startedAt ??= at; updatedAt = at; }
 
     if (line.source === 'USER_EXPLICIT' && typeof line.content === 'string') {
-      const m = line.content.match(USER_REQUEST);
-      const body = (m ? m[1] : line.content).trim();
+      const body = userBody(line.content);
       if (body) pushMessage(messages, { role: 'user', text: body, at });
     } else if (line.source === 'MODEL' && line.type === 'PLANNER_RESPONSE') {
       const body = typeof line.content === 'string' ? line.content.trim() : '';
@@ -39,9 +97,13 @@ export function parseAntigravity(text, meta = {}) {
 export function locateAntigravity(payload = {}) {
   const transcriptPath = payload.transcriptPath || null;
   const fromPath = transcriptPath?.match(BRAIN_ID)?.[1] || null;
+  const sessionId = payload.conversationId || fromPath;
+  const fromWorkspace = Array.isArray(payload.workspacePaths) && payload.workspacePaths[0]
+    ? payload.workspacePaths[0]
+    : null;
   return {
     transcriptPath,
-    sessionId: payload.conversationId || fromPath,
-    cwd: Array.isArray(payload.workspacePaths) && payload.workspacePaths[0] ? payload.workspacePaths[0] : null,
+    sessionId,
+    cwd: fromWorkspace || cwdFromAntigravityMeta(transcriptPath, sessionId),
   };
 }

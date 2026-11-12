@@ -239,8 +239,24 @@ function writeConfig(file, cfg, existed) {
   fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n', 'utf8');
 }
 
-function edit({ agent, scope, projectRoot, home }, mutate) {
-  const file = targetFile(agent, scope, projectRoot, home);
+/**
+ * T3 Code runs Antigravity with GEMINI_HOME = ~/.t3/userdata/providers/antigravity/<hash>.
+ * It links skills from ~/.gemini but deliberately leaves hooks out of that profile, so the
+ * user-level ~/.gemini/config/hooks.json never fires for T3 sessions. Install into each
+ * profile's config/hooks.json as well.
+ */
+export function t3AntigravityHookFiles(home) {
+  const root = path.join(home, '.t3', 'userdata', 'providers', 'antigravity');
+  try {
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => path.join(root, d.name, 'config', 'hooks.json'));
+  } catch {
+    return [];
+  }
+}
+
+function editFile(file, mutate) {
   let cfg, existed;
   try {
     ({ cfg, existed } = readConfig(file));
@@ -256,11 +272,49 @@ function edit({ agent, scope, projectRoot, home }, mutate) {
   return { file, changed };
 }
 
+function edit({ agent, scope, projectRoot, home }, mutate) {
+  return editFile(targetFile(agent, scope, projectRoot, home), mutate);
+}
+
+function applyAntigravityStyle(cfg, scriptPath) {
+  const command = hookCommand(scriptPath, 'antigravity');
+  if (antigravityStyle.has(cfg)) {
+    const before = JSON.stringify(cfg);
+    antigravityStyle.remove(cfg);
+    antigravityStyle.add(cfg, command);
+    return JSON.stringify(cfg) !== before;
+  }
+  antigravityStyle.add(cfg, command);
+  return true;
+}
+
 /** @returns {{file: string, changed: boolean, note?: string}} */
 export function install({ agent, scope = 'user', projectRoot, home, scriptPath }) {
   if (agent === 'opencode') return pluginFile.install(targetFile(agent, scope, projectRoot, home), scriptPath);
   if (agent === 'codex') return codexNotify.install(targetFile(agent, scope, projectRoot, home), scriptPath);
   if (agent === 'copilot') return copilotHookFile.install(targetFile(agent, scope, projectRoot, home), scriptPath);
+  if (agent === 'antigravity') {
+    const primary = editFile(targetFile(agent, scope, projectRoot, home), (cfg) => applyAntigravityStyle(cfg, scriptPath));
+    const notes = [];
+    if (primary.note) notes.push(primary.note);
+    let changed = primary.changed;
+    if (scope === 'user') {
+      const t3Files = t3AntigravityHookFiles(home);
+      let t3Changed = 0;
+      for (const file of t3Files) {
+        const r = editFile(file, (cfg) => applyAntigravityStyle(cfg, scriptPath));
+        if (r.note) notes.push(r.note);
+        if (r.changed) { changed = true; t3Changed++; }
+      }
+      if (t3Files.length) {
+        notes.push(`Also ${t3Changed ? 'installed' : 'already installed'} in ${t3Files.length} T3 Code Antigravity profile(s) under ~/.t3/userdata/providers/antigravity (T3 keeps ~/.gemini hooks out of those profiles). Re-run install after adding a new Antigravity account in T3.`);
+      }
+    }
+    if (!notes.length && /\s/.test(String(scriptPath))) {
+      notes.push('The convo-sync path contains a space. Antigravity on Windows passes quotes to node literally, so this hook may fail there. Install the skill to a path without spaces.');
+    }
+    return { file: primary.file, changed, ...(notes.length ? { note: notes.join('\n') } : {}) };
+  }
   const style = STYLES[agent];
   if (!style) throw new Error(`unknown agent: ${agent}`);
   const result = edit({ agent, scope, projectRoot, home }, (cfg) => {
@@ -275,9 +329,6 @@ export function install({ agent, scope = 'user', projectRoot, home, scriptPath }
     style.add(cfg, command);
     return true;
   });
-  if (agent === 'antigravity' && !result.note && /\s/.test(String(scriptPath))) {
-    result.note = 'The convo-sync path contains a space. Antigravity on Windows passes quotes to node literally, so this hook may fail there. Install the skill to a path without spaces.';
-  }
   return result;
 }
 
@@ -290,6 +341,21 @@ export function uninstall({ agent, scope = 'user', projectRoot, home }) {
       .map(cleanLegacyCodexHooks).some(Boolean);
     const r = codexNotify.uninstall(targetFile(agent, scope, projectRoot, home));
     return { ...r, changed: r.changed || legacy };
+  }
+  if (agent === 'antigravity') {
+    const file = targetFile(agent, scope, projectRoot, home);
+    let changed = false;
+    const files = scope === 'user' ? [file, ...t3AntigravityHookFiles(home)] : [file];
+    for (const f of files) {
+      if (!fs.existsSync(f)) continue;
+      const r = editFile(f, (cfg) => {
+        if (!antigravityStyle.has(cfg)) return false;
+        antigravityStyle.remove(cfg);
+        return true;
+      });
+      if (r.changed) changed = true;
+    }
+    return { file, changed };
   }
   const style = STYLES[agent];
   if (!style) throw new Error(`unknown agent: ${agent}`);
@@ -314,6 +380,13 @@ export function status({ projectRoot, home }) {
       else if (agent === 'copilot') installed = copilotHookFile.has(file);
       else try { installed = STYLES[agent].has(readConfig(file).cfg); } catch { /* unreadable */ }
       rows.push({ agent, scope, file, installed });
+    }
+    if (agent === 'antigravity') {
+      for (const file of t3AntigravityHookFiles(home)) {
+        let installed = false;
+        try { installed = antigravityStyle.has(readConfig(file).cfg); } catch { /* unreadable */ }
+        rows.push({ agent, scope: 't3', file, installed });
+      }
     }
   }
   return rows;

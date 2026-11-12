@@ -66,4 +66,5 @@ Create this only when the user asks for different behaviour in a project. Unknow
 - **Answering "nothing to continue" without running `context`.** The notes are files on disk; they are never in your conversation until you run it.
 - **Expecting a note right after install.** Notes are written at the end of a turn. Earlier sessions are not imported.
 - **No note appears.** Run `status`, then check `<OS temp dir>/convo-sync.log` (set `CONVO_SYNC_DEBUG=1` to log every sync).
+- **Antigravity in T3 Code writes nothing.** T3 uses a private `GEMINI_HOME` under `~/.t3/.../antigravity/` and does not load `~/.gemini/config/hooks.json`. User-scope install also seeds each T3 profile's `config/hooks.json`; re-run install after adding an Antigravity account in T3.
 - **Assuming notes are safe to publish.** Redaction is best-effort (API keys, tokens, private keys, `password=`-style values).
